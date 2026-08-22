@@ -1,0 +1,14 @@
+{
+  "name": "flexar",
+  "version": "1.0.0",
+  "description": "Node chain & particle engine using Rust WASM and WebGL/WebGPU",
+  "scripts": {},
+  "devDependencies": {
+    "three": "^0.185.1",
+    "vite": "^8.2.2",
+    "wasm-pack": "^0.15.0"
+  },
+  "dependencies": {
+    "tweakpane": "^4.0.5"
+  }
+}
