@@ -1,6 +1,6 @@
 <div align="center">
 
-Build atmospheric visuals with GPU effects, branching graphs, and a workspace.
+Create cool atmospheric visuals with GPU effects, branching graphs, and a workspace.
 
 ![C++](https://img.shields.io/badge/Language-C%2B%2B20-00599C.svg)
 ![Dear ImGui](https://img.shields.io/badge/GUI-Dear%20ImGui%201.91.8-7861A8.svg)
