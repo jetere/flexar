@@ -1,9 +1,5 @@
 <div align="center">
 
-# flexar
-
-**A native node-based image and video editor for Windows.**
-
 Build atmospheric visuals with GPU effects, branching graphs, and a workspace.
 
 ![C++](https://img.shields.io/badge/Language-C%2B%2B20-00599C.svg)
