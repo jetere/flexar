@@ -1,0 +1,15 @@
+/build/
+/build-verified/
+/build-gothic/
+/build-pixel/
+decode-fixture.mp4
+smoke-error.txt
+/third_party/imgui.zip
+imgui.ini
+*.user
+/jt ref imgs/
+/assets/fonts/*.zip
+/assets/fonts/GothicByte.ttf
+export-test.mp4
+export-test.png
+image-fixture.bmp
