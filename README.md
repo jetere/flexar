@@ -1,74 +1,171 @@
+<div align="center">
+
 # flexar
 
-Native C++20 image/video node editor with Dear ImGui and Direct3D 12 compute effects.
+**A native node-based image and video editor for Windows.**
 
-## Launch
+Build atmospheric visuals with GPU effects, branching graphs, and a gothic pixel workspace.
 
-Run **`build-pixel/Release/flexar-canvas.exe`**. This is the latest gothic redesign. Keep `shaders` and `assets/fonts` beside it. Earlier builds are left alone because an older editor may still be open.
+![C++](https://img.shields.io/badge/Language-C%2B%2B20-00599C.svg)
+![Dear ImGui](https://img.shields.io/badge/GUI-Dear%20ImGui%201.91.8-7861A8.svg)
+![DirectX](https://img.shields.io/badge/Rendering-DirectX%2012-107C10.svg)
+![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-lightgrey.svg)
+![Status](https://img.shields.io/badge/Status-Prototype-b65b73.svg)
 
-The app starts with an empty source. Supplied reference artwork is **not loaded, listed, copied into builds, or used as project content**. Its original folder is untouched and excluded by `.gitignore`.
+[Getting started](#getting-started) · [Controls](#controls) · [Effects](#effects) · [Architecture](docs/Architecture.md)
+
+</div>
 
 ## Workspace
 
-- The title is simply **flexar**, set in **GothicByte**. Warm ivory text, burgundy accents and a dark graph canvas form the theme. Controls use the open-source Pixelify Sans pixel font.
-- The graph occupies the main workspace. Source and Output nodes show live thumbnails for images and video.
-- Toggle **Side preview** for a larger preview and node controls. Double-click an effect to reveal its controls if hidden.
-- **IMAGE / VIDEO** chooses the import dialog type. Click **Import image/video**, or double-click Source Clip. Switching the button does not convert or replace loaded media.
-- **Play / Pause**, Space, the timeline and `|<` control playback. Still images can animate time-dependent effects.
-- **Look library** contains ten coded presets (`x000cc` through `x009ir`). Hover a code for its description. Choosing a preset replaces the graph.
-- **+ Add node**, or right-click the canvas, opens the 28-effect catalog. Nodes are inserted before Output.
-- Drag output to input pins; right-click an input to disconnect. Cycles are rejected.
-- Drag nodes, middle-drag to pan, wheel to zoom, **Fit** to frame, **Arrange** to lay out rows.
-- **Open/Save graph** stores source path, nodes, parameters, positions, enabled states and exact input connections. Version 2 supports Blend A/B and reads version 1 files.
+![Flexar node graph with gothic typography, pixel mountains, source and output thumbnails, and fixed side preview](docs/screenshots/workspace.png)
 
-## Effects and blending
+*A graph-first workspace with a parallax pixel landscape and an independent, fixed-size preview. Screenshots show the editor before importing media.*
 
-28 nodes: brightness/contrast/saturation, Gaussian blur, halftone, distressed Xerox, duotone, grain, liquid warp, neon trails, paper texture, vignette, outline, RGB matrix, **Blend**, chromatic split, posterize, pixelate, solarize, CRT scanlines, mirror fold, sharpen, bloom and ink threshold.
+<details>
+<summary><strong>Floating node controls</strong></summary>
 
-**Blend** takes **A / base** and **B / layer**. Its 12 modes are Normal, Multiply, Screen, Overlay, Soft Light, Hard Light, Difference, Exclusion, Add, Subtract, Darken and Lighten. Opacity combines with B's alpha using straight-alpha source-over compositing.
+![Flexar floating Node Controls window showing exposure, contrast, and saturation](docs/screenshots/node-controls.png)
 
-On insertion, A receives the previous final effect and B the original source. Reconnect either to blend other branches. Bypass returns A. An enabled Blend with a missing input disconnects Output. Independent second-media layers are not implemented.
+Click a node to edit its parameters. Double-click to bring its controls into view. The movable, resizable window closes independently of Preview.
 
-## Build / checks
+</details>
 
-Requires Windows 10/11, a Direct3D 12 GPU, and Visual Studio C++ Build Tools with CMake and a Windows SDK. Dear ImGui 1.91.8 is vendored with its MIT license.
+## Highlights
+
+- **Image and video input** — switch import modes from the toolbar; view the source and processed output directly on their nodes.
+- **28 GPU effects** — combine color, print, distortion, texture, and lighting effects with live parameter adjustments.
+- **Branching graphs** — connect typed pins, blend two branches, and reject circular dependencies.
+- **12 blend modes** — composite with opacity and alpha using a dedicated two-input Blend node.
+- **10 coded looks** — start with presets named `x000cc` through `x009ir`.
+- **Independent preview and controls** — expand the preview into a player with a timeline, original comparison, and fullscreen mode.
+- **PNG and MP4 export** — save a processed frame or render the full source video.
+- **Project persistence** — save media paths, connections, parameters, positions, and enabled states in `.flexar` files.
+
+## Getting started
+
+### Requirements
+
+- Windows 10 or 11, with a Direct3D 12-capable GPU.
+- Visual Studio C++ Build Tools with **Desktop development with C++**, CMake, and a Windows SDK.
+- Git and PowerShell; internet access for the initial GothicByte font download.
+
+### Build and launch
 
 ```powershell
+git clone https://github.com/jetere/flexar.git
+cd flexar
 ./bootstrap.ps1
+./build-pixel/Release/flexar-canvas.exe
 ```
 
-Builds `build-pixel` Release and runs CTest. Close this executable before rebuilding, or pass `-BuildDirectory`.
+The bootstrap script configures an x64 Release build and runs the test suite. Dear ImGui 1.91.8 is vendored. Keep the generated `shaders` and `assets/fonts` directories beside the executable when moving a build.
 
-- **graph_tests**: directions, cycle rollback, replacement, pruning, deletion, presets, Blend branches and effects.
-- **media_tests**: H.264 fixture, conversion, duration, seeking, frame retention and EOF.
-- **gpu_smoke**: pixel readback comparisons of all 12 blend modes with partial alpha and a branched Gaussian pass; bypass/missing-input behavior; Blend project roundtrip; every preset and all 22 effects.
+Close the executable before rebuilding. To use another build folder:
 
-## Font
+```powershell
+./bootstrap.ps1 -BuildDirectory build-local
+```
 
-GothicByte by HipFonts is included unmodified for this local personal prototype. The download is **personal-use-only**; obtain the author's commercial license before commercial use/distribution. Source and license link: `assets/fonts/LICENSE.txt`.
+### First graph
 
-## Current limits
+1. Choose **IMAGE** or **VIDEO**, then import your media.
+2. Open **+ Node** or right-click the canvas to add an effect before Output.
+3. Connect output pins to input pins and click a node to adjust its controls.
+4. Toggle **Preview** or open **Expand / Play** to inspect the result.
+5. Use **Save** for the graph or **EXPORT** for processed media.
 
-Media Foundation decodes video to CPU RGB32 before upload. Effects remain on the GPU. Zero-copy decode, WASAPI audio, keyframes, undo/redo, HDR and independent multi-media layers remain unimplemented. Codec availability determines format support; H.264 is tested. Images use a 1920-pixel preview edge; videos are capped at 4096 pixels per axis. Graphs are capped at 32 nodes. FPS depends on hardware and workload; 60+ FPS is not guaranteed.
+Applying a Look preset replaces the current graph. Save your graph first if you want to keep it.
 
-See `docs/Architecture.md` for the implementation design.
+## Controls
+
+| Action | Control |
+| --- | --- |
+| Move a node | Drag its header |
+| Pan the canvas | Hold **Space + left-drag**, or middle-drag |
+| Zoom | Mouse wheel |
+| Frame or organize nodes | **Fit** / **Arrange** |
+| Connect nodes | Drag an output pin to an input pin |
+| Disconnect an input | Right-click its pin |
+| Open parameters | Click a node |
+| Recover and focus controls | Double-click any node, including Source and Output |
+| Show or hide side preview | **Preview** toolbar button |
+| Close controls | **X** on the Node Controls title bar |
+| Playback | **Play / Pause**, timeline, and restart button |
+| Large preview | Click the preview image or **Expand / Play** |
+| Close large preview | **Escape** or its close button |
+
+Space is reserved for canvas panning; it does not toggle playback.
+
+## Effects
+
+| Category | Nodes |
+| --- | --- |
+| Color and tone | Brightness / Contrast, Color Matrix, Duotone, Posterize, Solarize, Ink Threshold |
+| Print and texture | Print Halftone, Distressed Xerox, Film Grain, Crumpled Paper, CRT Scanlines, Pixelate |
+| Detail and finish | Gaussian Blur, Sharpen, Ink Outline, Vignette, Bloom |
+| Distortion | Liquid Warp, Chromatic Split, Mirror Fold, Camera Shake, Lens Distortion, Prism Dispersion |
+| Light and motion | Neon Trails, Light Rays, Star Streaks, Film Flicker |
+| Compositing | Blend |
+
+Light Rays, Star Streaks, Camera Shake, Lens Distortion, Prism Dispersion, and Film Flicker are original Flexar shader effects inspired by common compositing techniques. They are not bundled Sapphire plugins.
+
+### Blending
+
+Blend accepts **A / base** and **B / layer**. Available modes:
+
+**Normal · Multiply · Screen · Overlay · Soft Light · Hard Light · Difference · Exclusion · Add · Subtract · Darken · Lighten**
+
+Opacity combines with the layer's alpha using straight-alpha source-over compositing. A newly inserted Blend uses the preceding effect as A and the source as B; reconnect the pins to combine other branches. Bypass returns A. Both inputs are required when enabled. Branches currently share one imported media source.
 
 ## Export
 
-Use EXPORT in the navbar: PNG saves the processed current frame with alpha; MP4 renders the full source video at 30 FPS with all graph effects. MP4 is H.264 at 16 Mbps, silent, with transparency composited over black and odd dimensions padded to even dimensions. Export uses the current preview resolution (images may have been scaled on import). Progress and Cancel remain available; cancel keeps a playable partial MP4. The original playhead/image returns after export. Pixelify Sans is licensed under the included SIL Open Font License.
+| Format | Behavior |
+| --- | --- |
+| **PNG** | Saves the current processed frame, preserving alpha. |
+| **MP4** | Renders the full source video as silent H.264 at 30 FPS and 16 Mbps. Transparency is composited over black; odd dimensions are padded to even dimensions. |
 
-## Preview player and light effects
+Exports use the current working resolution. Image imports may be scaled down. Video export provides progress and cancellation; cancelling retains a playable partial file. The original playhead is restored afterward.
 
-Preview and Controls are independent bordered panels. Click Expand / Play or the preview image to open a resizable player with Resume/Pause, Restart, timeline, Original comparison, full-screen toggle, and title-bar close button. Escape closes the player. Playback shares the main playhead.
+## Architecture and validation
 
-Six original Flexar effects extend the catalog: Light Rays, Star Streaks, Camera Shake, Lens Distortion, Prism Dispersion, and Film Flicker. These are independent shaders inspired by common compositing techniques, not commercial Sapphire plugins. All expose adjustable parameters and work in preview and export.
+```text
+Image / Video
+     |
+WIC / Media Foundation
+     |
+CPU frame -> GPU upload
+     |
+DAG evaluation -> DirectX 12 / HLSL effects
+     |
+Preview / PNG / H.264 MP4
+```
 
-The graph backdrop is original pixel-snapped vector linework inspired by gothic castle/sigil references; no reference image is loaded. Preview visibility is controlled only by Preview ON/OFF. Click an effect to open Controls independently; its X closes it. The app uses a local ivory crosshair with rose press feedback, without changing Windows cursor settings.
+The C++20 graph engine evaluates dependencies, while DirectX 12 executes effects and reuses GPU textures. The interface uses Dear ImGui, GothicByte headings, and ProggyClean body text. See [Architecture](docs/Architecture.md) for implementation details.
 
-Latest UI: Poison mountain/star/spire parallax port replaces the castle background. Body font is bundled ProggyClean; GothicByte headings remain. Preview is fixed at 320 x 310 and controlled by its toolbar button. Every node opens a movable, resizable Node Controls window with a title-bar X, independent from Preview.
+Run the checks after a build:
 
-Hold Space and left-drag to pan anywhere on the canvas, including over nodes. Middle-drag also pans. Space no longer toggles playback. Double-click any node (including Source/Output) to open, focus and recover its Controls window. Import media using the toolbar or Source Controls.
+```powershell
+ctest --test-dir build-pixel -C Release --output-on-failure
+```
 
-## GitHub checkout
+| Test | Coverage |
+| --- | --- |
+| `graph_tests` | Connections, cycles, graph changes, presets, and branching |
+| `media_tests` | Image import, PNG roundtrip, H.264 encode/decode, seeking, and EOF |
+| `gpu_smoke` | GPU pixel comparisons, blend modes and alpha, branching, presets, effects, and project roundtrip |
 
-Run ./bootstrap.ps1 after cloning. The personal-use GothicByte binary is excluded from Git; bootstrap downloads it from its published source. Its license note is tracked. Build output, generated test fixtures, and personal reference images are excluded. The current native C++ implementation is on main; the earlier Rust implementation remains on dpbuild.
+## Current limitations
+
+Flexar is a working prototype. Video decoding currently uses CPU RGB32 frames followed by a GPU upload; zero-copy decoding is not implemented. Audio playback/export, keyframes, undo/redo, HDR, and independent media layers are not yet available.
+
+Graphs are limited to 32 nodes. Images use a maximum 1920-pixel preview edge; videos are capped at 4096 pixels per axis. Codec support depends on the system; H.264 is tested. Performance depends on the GPU, resolution, and graph complexity.
+
+## Fonts and third-party notices
+
+- **Dear ImGui** is vendored under its [MIT license](third_party/imgui-1.91.8/LICENSE.txt).
+- **ProggyClean** is bundled with Dear ImGui; see the embedded font notice in [imgui_draw.cpp](third_party/imgui-1.91.8/imgui_draw.cpp).
+- **GothicByte** by HipFonts is personal-use-only. Its binary is excluded from Git and downloaded separately by bootstrap. See the [font notice](assets/fonts/LICENSE.txt) for source and commercial licensing details.
+- **Pixelify Sans** is retained in the font assets with its SIL Open Font License.
+
+The `main` branch contains the native C++ implementation. The earlier Rust implementation remains on `dpbuild`. Build outputs and personal reference artwork are excluded from this repository.
