@@ -12,20 +12,6 @@ Create cool atmospheric visuals with GPU effects, branching graphs, and a worksp
 
 </div>
 
-## Workspace
-
-![Flexar node graph with gothic typography, pixel mountains, source and output thumbnails, and fixed side preview](docs/screenshots/workspace.png)
-
-*A graph-first workspace with a parallax pixel landscape and an independent, fixed-size preview. Screenshots show the editor before importing media.*
-
-<details>
-<summary><strong>Floating node controls</strong></summary>
-
-![Flexar floating Node Controls window showing exposure, contrast, and saturation](docs/screenshots/node-controls.png)
-
-Click a node to edit its parameters. Double-click to bring its controls into view. The movable, resizable window closes independently of Preview.
-
-</details>
 
 ## Highlights
 
