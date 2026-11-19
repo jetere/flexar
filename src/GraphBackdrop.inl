@@ -1,29 +1,80 @@
-    void graphBackdrop(ImDrawList* draw,ImVec2 base,ImVec2 area){
-        // Port of Poison's 320x180 pixel-canvas sky, seeded stars and RIDGES.
-        // Original: poison fixed/src/game/parts/11-canvas-renderer.js.
-        auto hash=[](int a,int b){uint32_t h=uint32_t(a+1013)*374761393u ^ uint32_t(b+7919)*668265263u;h=(h^(h>>13))*1274126177u;return float(h^(h>>16))/4294967296.f;};
-        auto mod=[](float a,float b){return std::fmod(std::fmod(a,b)+b,b);};
-        float scale=std::max(2.f,std::floor(std::min(area.x/320,area.y/180)));
-        float w=std::ceil(area.x/scale),h=std::ceil(area.y/scale);
-        auto rect=[&](float x,float y,float width,float height,ImU32 color){draw->AddRectFilled({base.x+std::floor(x)*scale,base.y+std::floor(y)*scale},{base.x+std::floor(x+width)*scale,base.y+std::floor(y+height)*scale},color);};
-        for(int band=0;band<14;++band){float t=band/13.f;rect(0,band*h/14,w,h/14+1,IM_COL32(int(3+11*t),int(2+7*t),int(10+24*t),255));}
-        float cameraX=-pan.x/scale,cameraY=-pan.y/scale;
-        for(int i=0;i<160;++i){float x=mod(hash(i,21)*w-cameraX*.05f,w),y=mod(hash(i,22)*h*.75f-cameraY*.03f,h);int light=55+(i%4)*20;rect(x,y,1,1,IM_COL32(light,light,light+20,255));}
-        const float bases[]={112,138,162},amps[]={46,34,22},steps[]={36,28,20},par[]={.12f,.25f,.4f},parY[]={.1f,.18f,.3f};
-        const int seeds[]={5,9,13};const ImU32 colors[]={IM_COL32(30,23,61,255),IM_COL32(19,15,41,255),IM_COL32(10,9,24,255)};
-        for(int layer=0;layer<3;++layer){
-            if(layer==2)for(int i=0;i<12;++i){float x=mod(i*90+hash(i,1)*60-cameraX*.32f,w+90)-45;float spire=26+hash(i,2)*50,sw=4+hash(i,3)*7,top=h*.8f-spire;
-                for(float y=top;y<h;++y){float half=std::min(sw,1+std::floor((y-top)*sw/spire));rect(x-half,y,half*2,1,IM_COL32(18,13,38,255));}rect(x-1,top-2,2,2,IM_COL32(81,56,105,255));}
-            for(float x=0;x<w;x+=2){float u=(x+cameraX*par[layer])/steps[layer];int i=int(std::floor(u));float f=u-i,sm=f*f*(3-2*f);float a=hash(int(mod(float(i),48)),seeds[layer]),b=hash(int(mod(float(i+1),48)),seeds[layer]);float y=(bases[layer]-(a+(b-a)*sm)*amps[layer])*h/180-cameraY*parY[layer];y=std::floor(y/2)*2;rect(x,y,2,h-y+2,colors[layer]);}
+    const wchar_t* backdropFiles[4]={L"perfect_hue_80.jpg",L"perfect_hue_91.jpg",L"perfect_hue_93.jpg",L"perfect_hue_117.jpg"};
+    const char* backdropNames[4]={"01 / TEAL GLASS","02 / VIOLET STRUCTURE","03 / BLUE FACETS","04 / AMBER FIELD"};
+    int backdropStyle{};
+    uint64_t backdropHandles[4]{};
+    ImVec2 backdropSizes[4]{};
+    bool backdropAttempted[4]{};
+    void ensureBackdrop(int index){
+        int i=std::clamp(index,0,3);
+        if(backdropAttempted[i]||!runtime)return;
+        backdropAttempted[i]=true;
+        safely([&]{
+            auto path=findAsset(root,backdropFiles[i],{L"assets/backgrounds",L"Music"});
+            if(path.empty())throw std::runtime_error("Wallpaper not found");
+            auto image=loadImage(path);
+            backdropSizes[i]={float(image.width),float(image.height)};
+            backdropHandles[i]=runtime->uploadBackdrop(image,static_cast<size_t>(i));
+        });
+    }
+    void drawWallpaper(ImDrawList* draw,ImVec2 pos,ImVec2 size){
+        if(size.x<=0||size.y<=0)return;
+        int i=std::clamp(backdropStyle,0,3);ensureBackdrop(i);
+        ImVec2 end{pos.x+size.x,pos.y+size.y};
+        draw->AddRectFilled(pos,end,IM_COL32(9,11,10,255));
+        if(backdropHandles[i]){
+            float imageAspect=backdropSizes[i].x/std::max(1.f,backdropSizes[i].y);
+            float canvasAspect=size.x/size.y;ImVec2 uv0{0,0},uv1{1,1};
+            if(canvasAspect<imageAspect){float visible=canvasAspect/imageAspect;uv0.x=(1-visible)*.5f;uv1.x=1-uv0.x;}
+            else{float visible=imageAspect/canvasAspect;uv0.y=(1-visible)*.5f;uv1.y=1-uv0.y;}
+            draw->AddImage(reinterpret_cast<ImTextureID>(backdropHandles[i]),pos,end,uv0,uv1);
+            draw->AddRectFilled(pos,end,IM_COL32(7,9,8,150));
         }
     }
-    void crosshair(){
-        // App-local cursor; no system cursor settings are changed.
-        auto& io=ImGui::GetIO();bool inside=ImGui::IsMousePosValid()&&ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
-        if(!inside)return;
-        ImGui::SetMouseCursor(ImGuiMouseCursor_None);auto draw=ImGui::GetForegroundDrawList();ImVec2 p{std::floor(io.MousePos.x),std::floor(io.MousePos.y)};
-        auto stroke=[&](float x,float y,float xx,float yy){draw->AddLine({p.x+x,p.y+y},{p.x+xx,p.y+yy},IM_COL32(0,0,0,255),4);draw->AddLine({p.x+x,p.y+y},{p.x+xx,p.y+yy},io.MouseDown[0]?IM_COL32(214,118,148,255):IM_COL32(239,234,220,255),2);};
-        stroke(-12,0,-5,0);stroke(5,0,12,0);stroke(0,-12,0,-5);stroke(0,5,0,12);
-        draw->AddRectFilled({p.x-1,p.y-1},{p.x+2,p.y+2},IM_COL32(239,234,220,255));
-        if(dragPin){stroke(-8,-8,-5,-8);stroke(5,8,8,8);}
+    void graphBackdrop(ImDrawList*,ImVec2,ImVec2){}
+    void crosshair(){}
+    void musicSection(){
+        ImGui::PushStyleColor(ImGuiCol_ChildBg,ImVec4(paper.x,paper.y,paper.z,.96f));
+        ImGui::BeginChild("Music section",{0,152},true,ImGuiWindowFlags_NoScrollbar);
+        ImVec2 mark=ImGui::GetCursorScreenPos();
+        ImGui::GetWindowDrawList()->AddRectFilled(mark,{mark.x+30,mark.y+4},accentU32);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY()+8);
+        heading("MUSIC");ImGui::Separator();
+        bool ready=music&&music->available();
+        bool musicPlaying=ready&&music->playing();
+        if(music&&!music->errorText.empty())ImGui::TextWrapped("%s",music->errorText.c_str());
+        ImGui::BeginDisabled(!ready);
+        float width=(ImGui::GetContentRegionAvail().x-8)*.5f;
+        // Active transport is filled with the accent; the other stays neutral.
+        if(musicPlaying)ImGui::PushStyleColor(ImGuiCol_Button,accent);
+        if(ImGui::Button("PLAY",{width,34}))music->resume();
+        if(musicPlaying)ImGui::PopStyleColor();
+        ImGui::SameLine(0,8);
+        if(!musicPlaying)ImGui::PushStyleColor(ImGuiCol_Button,accent);
+        if(ImGui::Button("PAUSE",{width,34}))music->pause();
+        if(!musicPlaying)ImGui::PopStyleColor();
+        ImGui::Spacing();
+        int volume=ready?music->volume():0;
+        ImGui::SetNextItemWidth(-1);
+        if(ImGui::SliderInt("##MusicVolume",&volume,0,100,"VOLUME  %d%%"))music->setVolume(volume);
+        ImGui::EndDisabled();
+        ImGui::EndChild();ImGui::PopStyleColor();
+    }
+    void appearanceMenu(){
+        if(ImGui::Button("SURFACE",{96,30}))ImGui::OpenPopup("Surface");
+        if(ImGui::BeginPopup("Surface")){
+            heading("SURFACE");
+            ImGui::TextDisabled("STATIC WALLPAPER / 04 SOURCES");
+            ImGui::Spacing();
+            const ImVec4 swatches[4]={{.10f,.52f,.50f,1},{.45f,.28f,.74f,1},{.08f,.42f,.70f,1},{.86f,.56f,.10f,1}};
+            for(int i=0;i<4;++i){
+                ImGui::PushID(i);
+                bool active=backdropStyle==i;
+                ImGui::PushStyleColor(ImGuiCol_Button,active?accent:swatches[i]);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered,active?accent:ImVec4(swatches[i].x,swatches[i].y,swatches[i].z,.78f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive,ink);
+                if(ImGui::Button(backdropNames[i],{260,28})){backdropStyle=i;applyTheme();ImGui::CloseCurrentPopup();}
+                ImGui::PopStyleColor(3);ImGui::PopID();
+            }
+            ImGui::EndPopup();
+        }
     }

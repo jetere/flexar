@@ -19,6 +19,7 @@ int main() {
     check(branches.find(blend)->inputs.size()==2);check(wire(source,left));check(wire(source,right));check(wire(left,blend));check(wire(right,blend,1));check(wire(blend,output));
     check(branches.execution(output).size()==5);check(!wire(blend,left));check(branches.connections.size()==5);
     branches.disconnect(branches.find(blend)->inputs[1].id);check(branches.execution(output).size()==4);
-    for(auto& effect:catalog()){auto id=branches.add(effect.effect);check(!branches.find(id)->parameters.empty());}
+    for(auto& effect:catalog()){auto id=branches.add(effect.effect);check(!branches.find(id)->parameters.empty()||effect.effect==Effect::Compositor);}
+    auto compositor=branches.add(Effect::Compositor);branches.setLayerCount(compositor,8);check(branches.find(compositor)->inputs.size()==8);check(wire(source,compositor,7));auto oldPin=branches.find(compositor)->inputs[7].id;branches.setLayerCount(compositor,2);check(!branches.pin(oldPin));for(auto& c:branches.connections)check(c.to!=oldPin);branches.setLayerCount(compositor,8);check(branches.find(compositor)->inputs[7].id!=oldPin);check(!wire(compositor,compositor,0));
     std::cout<<"Graph tests passed: cycle rollback, pin validation, replacement, pruning, deletion, presets\n";
 }

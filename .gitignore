@@ -13,3 +13,11 @@ imgui.ini
 export-test.mp4
 export-test.png
 image-fixture.bmp
+/build-controls/
+
+/build-swiss/
+
+/build-editorial/
+/assets/music/
+/assets/backgrounds/
+/dist/
