@@ -35,7 +35,17 @@ const std::vector<EffectInfo>& catalog() {
         {Effect::Shake,"Camera Shake","Animated smooth handheld displacement and rotation"},
         {Effect::LensWarp,"Lens Distortion","Barrel or pincushion lens deformation"},
         {Effect::Prism,"Prism Dispersion","Radial RGB refraction around the optical center"},
-        {Effect::Flicker,"Film Flicker","Seeded exposure flutter and color instability"}
+        {Effect::Flicker,"Film Flicker","Seeded exposure flutter and color instability"},
+        {Effect::Compositor,"Compositor","Stack up to eight layers with independent transforms and alpha compositing"},
+        {Effect::GridPixel,"Grid Pixelation","Rounded UV grid sampling"},
+        {Effect::ColorSteps,"Stepped Color Mosaic","Independent grid resolution and RGB quantization"},
+        {Effect::RadialChromatic,"Radial Chromatic Aberration","Distance-based outward channel separation"},
+        {Effect::ColorBalance,"Color Balance","Independent RGB gain and lift"},
+        {Effect::EdgeGlow,"Edge Glow","Colored edge light with threshold and source mix"},
+        {Effect::RadialBlur,"Radial Blur","Zoom blur around an adjustable center"},
+        {Effect::Ripple,"Ripple Distortion","Animated radial waves with adjustable falloff"},
+        {Effect::LumaKey,"Luma Key","Create transparency from image luminance"},
+        {Effect::DropShadow,"Drop Shadow","Offset soft alpha shadow with color and opacity"}
     }; return entries;
 }
 Id Graph::add(Effect effect, float x, float y) {
@@ -43,9 +53,19 @@ Id Graph::add(Effect effect, float x, float y) {
     n.name=effect==Effect::Source?"Source Clip":effect==Effect::Output?"Output":"Effect";
     for (auto& e:catalog()) if(e.effect==effect) n.name=e.name;
     if(effect!=Effect::Source) n.inputs.push_back({next_++,n.id,Direction::Input});
-    if(effect==Effect::Blend) n.inputs.push_back({next_++,n.id,Direction::Input});
+    if(effect==Effect::Blend||effect==Effect::Compositor) n.inputs.push_back({next_++,n.id,Direction::Input});
     if(effect!=Effect::Output) n.outputs.push_back({next_++,n.id,Direction::Output});
     switch(effect) {
+    case Effect::Compositor:n.layers.resize(2);break;
+    case Effect::GridPixel:n.parameters={{"Grid divisions",40,1,256}};break;
+    case Effect::ColorSteps:n.parameters={{"Columns",64,1,512},{"Rows",64,1,512},{"Color step",.100392156862f,.01f,.5f}};break;
+    case Effect::RadialChromatic:n.parameters={{"Intensity",40,0,200}};break;
+    case Effect::ColorBalance:n.parameters={{"Red gain",1,0,3},{"Green gain",1,0,3},{"Blue gain",1,0,3},{"Red lift",0,-1,1},{"Green lift",0,-1,1},{"Blue lift",0,-1,1}};break;
+    case Effect::EdgeGlow:n.parameters={{"Width",2,1,12},{"Intensity",2,0,8},{"Threshold",.05f,0,1},{"Source mix",1,0,1},{"Red",.8f,0,1},{"Green",.2f,0,1},{"Blue",1,0,1}};break;
+    case Effect::RadialBlur:n.parameters={{"Amount",.15f,0,1},{"Center X",.5f,0,1},{"Center Y",.5f,0,1},{"Mix",1,0,1}};break;
+    case Effect::Ripple:n.parameters={{"Amplitude",.02f,0,.2f},{"Frequency",30,1,100},{"Speed",2,-10,10},{"Falloff",1,0,5},{"Center X",.5f,0,1},{"Center Y",.5f,0,1}};break;
+    case Effect::LumaKey:n.parameters={{"Threshold",.3f,0,1},{"Softness",.05f,.001f,.5f},{"Invert",0,0,1}};break;
+    case Effect::DropShadow:n.parameters={{"Offset X",12,-100,100},{"Offset Y",12,-100,100},{"Softness",4,0,24},{"Opacity",.7f,0,1},{"Red",0,0,1},{"Green",0,0,1},{"Blue",0,0,1}};break;
     case Effect::Grade: n.parameters={{"Exposure",0,-3,3},{"Contrast",1,0,3},{"Saturation",1,0,2}}; break;
     case Effect::Blur: n.parameters={{"Radius",4,0,24}}; break;
     case Effect::Halftone: n.parameters={{"Dot size",5,2,20},{"Angle",45,0,180},{"Ink contrast",1.2f,.2f,3}}; break;
@@ -77,6 +97,12 @@ Id Graph::add(Effect effect, float x, float y) {
     default: break;
     }
     nodes.push_back(n); return n.id;
+}
+void Graph::setLayerCount(Id id,size_t count){
+    auto node=find(id);if(!node||node->effect!=Effect::Compositor||count<1||count>8)throw std::runtime_error("Compositor supports 1 to 8 layers");
+    while(node->inputs.size()>count){disconnect(node->inputs.back().id);node->inputs.pop_back();}
+    while(node->inputs.size()<count)node->inputs.push_back({next_++,id,Direction::Input});
+    node->layers.resize(count);
 }
 Node* Graph::find(Id id) { for(auto& n:nodes) if(n.id==id)return &n; return nullptr; }
 const Node* Graph::find(Id id) const { for(auto& n:nodes) if(n.id==id)return &n; return nullptr; }
@@ -119,22 +145,42 @@ void Graph::preset(int index) {
     nodes.clear();connections.clear();
     std::vector<Effect> effects;
     switch(index) {
-    case 0: effects={Effect::Grade};break;
-    case 1: effects={Effect::Xerox,Effect::Duotone,Effect::Grain};break;
-    case 2: effects={Effect::Grade,Effect::Halftone,Effect::Xerox};break;
-    case 3: effects={Effect::Liquid,Effect::Outline};break;
-    case 4: effects={Effect::Grade,Effect::Duotone,Effect::Grain,Effect::Vignette};break;
-    case 5: effects={Effect::Liquid,Effect::Neon,Effect::Grain};break;
-    case 6: effects={Effect::Grade,Effect::Paper,Effect::Grain};break;
-    case 7: effects={Effect::Chromatic,Effect::Scanlines,Effect::Vignette};break;
-    case 8: effects={Effect::Posterize,Effect::Bloom,Effect::Grain};break;
-    case 9: effects={Effect::Solarize,Effect::Duotone,Effect::Sharpen};break;
-    default: throw std::runtime_error("Unknown preset");
+    case 0:effects={Effect::Grade};break;
+    case 1:effects={Effect::Custom,Effect::Bloom};break;
+    case 2:effects={Effect::Grade,Effect::Custom,Effect::Grain};break;
+    case 3:effects={Effect::Custom,Effect::Chromatic};break;
+    case 4:effects={Effect::Custom,Effect::Scanlines};break;
+    case 5:effects={Effect::Custom,Effect::Bloom,Effect::Vignette};break;
+    case 6:effects={Effect::Grade,Effect::Custom,Effect::Grain};break;
+    case 7:effects={Effect::Custom,Effect::Prism};break;
+    case 8:effects={Effect::Custom,Effect::EdgeGlow};break;
+    case 9:effects={Effect::Grade,Effect::Custom,Effect::Grain};break;
+    case 10:effects={Effect::Xerox,Effect::Duotone,Effect::Grain};break;
+    case 11:effects={Effect::Grade,Effect::Halftone,Effect::Paper};break;
+    case 12:effects={Effect::ColorBalance,Effect::Chromatic,Effect::Scanlines};break;
+    case 13:effects={Effect::Solarize,Effect::Duotone,Effect::EdgeGlow};break;
+    case 14:effects={Effect::Custom,Effect::GridPixel,Effect::Grain};break;
+    case 15:effects={Effect::Outline,Effect::Duotone,Effect::Bloom};break;
+    case 16:effects={Effect::Custom,Effect::GlowRays,Effect::Grain};break;
+    case 17:effects={Effect::Ripple,Effect::Custom,Effect::Prism};break;
+    case 18:effects={Effect::Custom,Effect::Grade,Effect::Grain};break;
+    case 19:effects={Effect::Custom,Effect::Halftone,Effect::ColorBalance};break;
+    default:throw std::runtime_error("Unknown preset");
     }
     Id previous=add(Effect::Source,30,80); int i=1; std::string error;
     effects.push_back(Effect::Output);
     for(auto e:effects) {Id current=add(e,30.f+310.f*i++,80);connect(find(previous)->outputs[0].id,find(current)->inputs[0].id,error);previous=current;}
-    if(index==4)for(auto& n:nodes)if(n.effect==Effect::Duotone)n.parameters[0].value=1;
-    if(index==2)for(auto& n:nodes)if(n.effect==Effect::Xerox)n.parameters[1].value=.08f;
+    for(auto& n:nodes){
+        if(n.effect==Effect::Custom)n.name=PresetShaders[index];
+        if(n.effect==Effect::Grain)n.parameters[0].value=.06f;
+        if(n.effect==Effect::Bloom){n.parameters[0].value=.7f;n.parameters[2].value=.45f;}
+        if(n.effect==Effect::Chromatic)n.parameters[0].value=3;
+        if(n.effect==Effect::Prism)n.parameters[0].value=.012f;
+        if(n.effect==Effect::EdgeGlow){n.parameters[1].value=.9f;n.parameters[3].value=.8f;}
+        if(n.effect==Effect::Grade&&index==18){n.parameters[1].value=1.4f;n.parameters[2].value=.15f;}
+        if(n.effect==Effect::Duotone&&index==15)n.parameters[0].value=2;
+        if(n.effect==Effect::Xerox)n.parameters[1].value=.12f;
+        if(n.effect==Effect::GlowRays)n.parameters[0].value=.35f;
+    }
 }
 }

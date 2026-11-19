@@ -1,6 +1,6 @@
 <div align="center">
 
-Create cool atmospheric visuals with GPU effects, branching graphs, and a workspace.
+Create cool atmospheric visuals with GPU effects, branching graphs, and a composition studio.
 
 ![C++](https://img.shields.io/badge/Language-C%2B%2B20-00599C.svg)
 ![Dear ImGui](https://img.shields.io/badge/GUI-Dear%20ImGui%201.91.8-7861A8.svg)
@@ -15,14 +15,18 @@ Create cool atmospheric visuals with GPU effects, branching graphs, and a worksp
 
 ## Highlights
 
-- **Image and video input** — switch import modes from the toolbar; view the source and processed output directly on their nodes.
-- **28 GPU effects** — combine color, print, distortion, texture, and lighting effects with live parameter adjustments.
-- **Branching graphs** — connect typed pins, blend two branches, and reject circular dependencies.
+- **Image and video input** — switch import modes from the toolbar; double-click a Source node to import media from the system file picker.
+- **Dark Swiss workspace** — graphite surfaces, hard edges, and one accent derived from the active wallpaper.
+- **Ambient music and surfaces** — a looping track with PLAY / PAUSE and volume, plus four static wallpaper JPGs that change the workspace accent.
+- **GPU shader effects** — combine color, print, distortion, texture, and lighting effects with live parameter adjustments.
+- **Branching graphs** — connect typed pins, blend branches, and reject circular dependencies.
 - **12 blend modes** — composite with opacity and alpha using a dedicated two-input Blend node.
-- **10 coded looks** — start with presets named `x000cc` through `x009ir`.
+- **20 coded looks** — start with presets named `x000cc` through `x019fl`.
+- **Composition studio** — a multi-layer comp viewer with transform gizmos, comp settings, and a timeline; pen drawing is temporarily disabled.
+- **Undo / redo** — Ctrl+Z / Ctrl+Y or Ctrl+Shift+Z, with matching toolbar buttons.
 - **Independent preview and controls** — expand the preview into a player with a timeline, original comparison, and fullscreen mode.
 - **PNG and MP4 export** — save a processed frame or render the full source video.
-- **Project persistence** — save media paths, connections, parameters, positions, and enabled states in `.flexar` files.
+- **Project persistence** — save media paths, graph state, composition settings, and mask paths in `.flexar` files.
 
 ## Getting started
 
@@ -37,11 +41,11 @@ Create cool atmospheric visuals with GPU effects, branching graphs, and a worksp
 ```powershell
 git clone https://github.com/jetere/flexar.git
 cd flexar
-./bootstrap.ps1
-./build-pixel/Release/flexar-canvas.exe
+./bootstrap.ps1 -BuildDirectory build-controls
+./build-controls/Release/flexar-canvas.exe
 ```
 
-The bootstrap script configures an x64 Release build and runs the test suite. Dear ImGui 1.91.8 is vendored. Keep the generated `shaders` and `assets/fonts` directories beside the executable when moving a build.
+The bootstrap script configures an x64 Release build and runs the test suite. Dear ImGui 1.91.8 is vendored. Keep the generated `shaders` directory beside the executable. The ambient track and wallpapers are read from a `Music` folder beside the executable.
 
 Close the executable before rebuilding. To use another build folder:
 
@@ -55,7 +59,8 @@ Close the executable before rebuilding. To use another build folder:
 2. Open **+ Node** or right-click the canvas to add an effect before Output.
 3. Connect output pins to input pins and click a node to adjust its controls.
 4. Toggle **Preview** or open **Expand / Play** to inspect the result.
-5. Use **Save** for the graph or **EXPORT** for processed media.
+5. Add a **Compositor** node, then choose **Open composition studio** in its controls to arrange layers.
+6. Use **Save** for the graph or **EXPORT** for processed media.
 
 Applying a Look preset replaces the current graph. Save your graph first if you want to keep it.
 
@@ -70,12 +75,20 @@ Applying a Look preset replaces the current graph. Save your graph first if you 
 | Connect nodes | Drag an output pin to an input pin |
 | Disconnect an input | Right-click its pin |
 | Open parameters | Click a node |
-| Recover and focus controls | Double-click any node, including Source and Output |
+| Recover and focus controls | Double-click a node; double-click a Source node to import media from the system dialog |
 | Show or hide side preview | **Preview** toolbar button |
 | Close controls | **X** on the Node Controls title bar |
 | Playback | **Play / Pause**, timeline, and restart button |
 | Large preview | Click the preview image or **Expand / Play** |
 | Close large preview | **Escape** or its close button |
+| Import source media | Double-click a **Source** node to open the system file picker |
+| Remove selected node | **Delete** or **Backspace** while the graph or Node Controls is focused; protected while typing. Primary Source and Output remain required. |
+| Undo / redo | **Ctrl+Z** / **Ctrl+Y** or **Ctrl+Shift+Z**, or the UNDO / REDO navbar buttons |
+| Open composition studio | Double-click a **Compositor** node, or use **Open composition studio** in its controls |
+| Studio tools | **V** select, **H** hand; **PEN** is temporarily disabled |
+| Transform a studio layer | Drag its body to move, corners to scale, top handle to rotate; hold **Shift** for uniform scaling |
+| Studio masks | Pen drawing is temporarily disabled; existing mask paths can be edited in **Mask / path** |
+| Pan and zoom the studio | **H** drag or middle-drag to pan; mouse wheel zooms; **FIT** resets the view |
 
 Space is reserved for canvas panning; it does not toggle playback.
 
@@ -88,7 +101,7 @@ Space is reserved for canvas panning; it does not toggle playback.
 | Detail and finish | Gaussian Blur, Sharpen, Ink Outline, Vignette, Bloom |
 | Distortion | Liquid Warp, Chromatic Split, Mirror Fold, Camera Shake, Lens Distortion, Prism Dispersion |
 | Light and motion | Neon Trails, Light Rays, Star Streaks, Film Flicker |
-| Compositing | Blend |
+| Compositing | Blend, Compositor |
 
 Light Rays, Star Streaks, Camera Shake, Lens Distortion, Prism Dispersion, and Film Flicker are original Flexar shader effects inspired by common compositing techniques. They are not bundled Sapphire plugins.
 
@@ -98,7 +111,7 @@ Blend accepts **A / base** and **B / layer**. Available modes:
 
 **Normal · Multiply · Screen · Overlay · Soft Light · Hard Light · Difference · Exclusion · Add · Subtract · Darken · Lighten**
 
-Opacity combines with the layer's alpha using straight-alpha source-over compositing. A newly inserted Blend uses the preceding effect as A and the source as B; reconnect the pins to combine other branches. Bypass returns A. Both inputs are required when enabled. Branches currently share one imported media source.
+Opacity combines with the layer's alpha using straight-alpha source-over compositing. A newly inserted Blend uses the preceding effect as A and the source as B; reconnect the pins to combine other branches. Bypass returns A. Both inputs are required when enabled. Branches can use independent image or video Source Clip nodes. Normal mode provides alpha compositing.
 
 ## Export
 
@@ -107,7 +120,7 @@ Opacity combines with the layer's alpha using straight-alpha source-over composi
 | **PNG** | Saves the current processed frame, preserving alpha. |
 | **MP4** | Renders the full source video as silent H.264 at 30 FPS and 16 Mbps. Transparency is composited over black; odd dimensions are padded to even dimensions. |
 
-Exports use the current working resolution. Image imports may be scaled down. Video export provides progress and cancellation; cancelling retains a playable partial file. The original playhead is restored afterward.
+Exports use the current working resolution, not the composition studio's comp size. Image imports may be scaled down. Video export provides progress and cancellation; cancelling retains a playable partial file. The original playhead is restored afterward.
 
 ## Architecture and validation
 
@@ -128,20 +141,20 @@ The C++20 graph engine evaluates dependencies, while DirectX 12 executes effects
 Run the checks after a build:
 
 ```powershell
-ctest --test-dir build-pixel -C Release --output-on-failure
+ctest --test-dir build-controls -C Release --output-on-failure
 ```
 
 | Test | Coverage |
 | --- | --- |
 | `graph_tests` | Connections, cycles, graph changes, presets, and branching |
 | `media_tests` | Image import, PNG roundtrip, H.264 encode/decode, seeking, and EOF |
-| `gpu_smoke` | GPU pixel comparisons, blend modes and alpha, branching, presets, effects, and project roundtrip |
+| `gpu_smoke` | GPU pixel comparisons, blending, presets, effects, compositor masks, texture-slot isolation, floating-window focus, and `FLEXAR 5` roundtrip |
 
 ## Current limitations
 
-Flexar is a working prototype. Video decoding currently uses CPU RGB32 frames followed by a GPU upload; zero-copy decoding is not implemented. Audio playback/export, keyframes, undo/redo, HDR, and independent media layers are not yet available.
+Flexar is a working prototype. Video decoding currently uses CPU RGB32 frames followed by a GPU upload; zero-copy decoding is not implemented. Ambient music playback and undo/redo are available, but audio export, keyframes, HDR, and independent media layers are not yet available. Comp masks are static shapes; they do not animate or store keyframes.
 
-Graphs are limited to 32 nodes. Images use a maximum 1920-pixel preview edge; videos are capped at 4096 pixels per axis. Codec support depends on the system; H.264 is tested. Performance depends on the GPU, resolution, and graph complexity.
+Graphs are limited to 32 nodes. Images use a maximum 1920-pixel preview edge; videos are capped at 4096 pixels per axis. Codec support depends on the system; H.264 is tested. Performance depends on the GPU, resolution, and graph complexity. Projects saved as `FLEXAR 5` contain composition settings and mask paths; older Flexar builds cannot open them.
 
 ## Fonts and third-party notices
 

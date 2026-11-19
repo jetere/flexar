@@ -112,5 +112,30 @@ void main(uint3 tid:SV_DispatchThreadID) {
     else if(effect==27){float2 center=p0.zw;float2 q=(uv-center)/p0.y;float aspect=size.x/size.y;float r2=dot(q*float2(aspect,1),q*float2(aspect,1));c=sampleColor(center+q*(1+p0.x*r2));}
     else if(effect==28){float2 center=p0.zw;float2 q=(uv-center)/p0.y;float distance=length(q);float2 d=q*distance*p0.x;c=float3(sampleColor(center+q+d).r,sampleColor(center+q).g,sampleColor(center+q-d).b);}
     else if(effect==29){float t=floor(time*p0.y);float exposure=(hash(float2(t,p0.w))*2-1)*p0.x;float drift=(hash(float2(t+17,p0.w))*2-1)*p0.z;c*=exp2(exposure)*float3(1+drift,1,1-drift);}
+    else if(effect==31){
+        // Parameters: position.xy, scale.xy, rotation, opacity, mode, first layer,
+        // flips.xy, crop left/top/right/bottom. Coordinates are centered pixels.
+        float2 q=(uv-.5)*size-p0.xy*size;
+        float angle=radians(p1.x),cs=cos(angle),sn=sin(angle);
+        q=float2(cs*q.x+sn*q.y,-sn*q.x+cs*q.y)/max(p0.zw,.001)/size+.5;
+        if(p2.x>.5)q.x=1-q.x;if(p2.y>.5)q.y=1-q.y;
+        bool inside=all(q>=float2(p2.z,p2.w))&&all(q<=1-float2(p3.x,p3.y));
+        float4 top=inside?Layer.SampleLevel(LinearClamp,q,0):float4(0,0,0,0);
+        float4 bottom=p1.w>.5?float4(0,0,0,0):source;
+        float ab=bottom.a,at=top.a*p1.y,alpha=at+ab*(1-at);
+        float3 rgb=((1-at)*ab*bottom.rgb+(1-ab)*at*top.rgb+ab*at*blendColor(bottom.rgb,top.rgb,(int)p1.z))/max(alpha,.00001);
+        Target[tid.xy]=float4(saturate(rgb),alpha);return;
+    }
+    else if(effect==32){float divisions=max(1,round(p0.x));Target[tid.xy]=Source.SampleLevel(LinearClamp,round(uv*divisions)/divisions,0);return;}
+    else if(effect==33){float2 grid=max(round(p0.xy),1);float4 v=Source.SampleLevel(LinearClamp,floor(uv*grid)/grid,0);v.rgb=floor(v.rgb/max(.01,p0.z))*max(.01,p0.z);Target[tid.xy]=v;return;}
+    else if(effect==34){float2 q=uv-.5,d=q*length(q)/size*p0.x;c=float3(sampleColor(uv-d).r,sampleColor(uv-d*.5).g,c.b);}
+    else if(effect==35){c=c*p0.xyz+float3(p0.w,p1.xy);}
+    else if(effect==36){float2 d=p0.x/size;float gx=lum(sampleColor(uv+float2(d.x,0)))-lum(sampleColor(uv-float2(d.x,0)));float gy=lum(sampleColor(uv+float2(0,d.y)))-lum(sampleColor(uv-float2(0,d.y)));float edge=max(0,length(float2(gx,gy))-p0.z)*p0.y;c=c*p0.w+edge*p1.xyz;}
+    else if(effect==37){float4 total=0;[unroll]for(int k=0;k<24;++k)total+=Source.SampleLevel(LinearClamp,lerp(uv,p0.yz,(k/23.)*p0.x),0);Target[tid.xy]=lerp(source,total/24,p0.w);return;}
+    else if(effect==38){float2 q=(uv-p1.xy)*float2(size.x/size.y,1);float r=length(q);float2 offset=q/max(r,.0001)*sin(r*p0.y-time*p0.z)*p0.x*exp(-r*p0.w);offset.x*=size.y/size.x;float2 target=uv+offset;Target[tid.xy]=Source.SampleLevel(LinearClamp,target,0);return;}
+    else if(effect==39){float a=smoothstep(p0.x-p0.y,p0.x+p0.y,lum(c));if(p0.z>.5)a=1-a;Target[tid.xy]=float4(c,source.a*a);return;}
+    else if(effect==40){float shadow=0;[unroll]for(int y=-2;y<=2;++y)[unroll]for(int x=-2;x<=2;++x){float2 q=uv-p0.xy/size+float2(x,y)*p0.z/size;shadow+=(all(q>=0)&&all(q<=1))?Source.SampleLevel(LinearClamp,q,0).a:0;}shadow=shadow/25*p0.w;float a=source.a+shadow*(1-source.a);float3 rgb=(c*source.a+p1.xyz*shadow*(1-source.a))/max(a,.00001);Target[tid.xy]=float4(rgb,a);return;}
+    else if(effect==41){float mask=Layer.SampleLevel(LinearClamp,uv,0).r;Target[tid.xy]=float4(c,source.a*mask);return;}
+
     Target[tid.xy]=float4(saturate(c),source.a);
 }

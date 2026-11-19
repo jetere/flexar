@@ -1,10 +1,6 @@
 param([string]$BuildDirectory = 'build-pixel')
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
-if (!(Test-Path 'assets/fonts/GothicByte.ttf')) {
-    Invoke-WebRequest 'https://www.1001fonts.com/download/gothicbyte.zip' -OutFile 'assets/fonts/gothicbyte.zip'
-    Expand-Archive 'assets/fonts/gothicbyte.zip' 'assets/fonts' -Force
-}
 if (!(Test-Path 'third_party/imgui-1.91.8/imgui.cpp')) {
     New-Item -ItemType Directory -Force third_party | Out-Null
     Invoke-WebRequest 'https://github.com/ocornut/imgui/archive/refs/tags/v1.91.8.zip' -OutFile 'third_party/imgui.zip'
